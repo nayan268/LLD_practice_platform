@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LDD Practice Lab — Low-Level Design Trainer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <div>
+        <h1>LDD Practice Lab</h1>
+        <p class="tagline">Practice low-level design: requirements, class &amp; sequence diagrams</p>
+        <p class="save-hint" id="save-hint">Browser-only saves. Run the server for durable disk saves.</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <select id="problem-select" class="problem-select" title="Choose a problem"></select>
+      <button id="timer-btn" class="btn btn-ghost" title="Start/stop practice timer">⏱ <span id="timer">00:00</span></button>
+      <button id="save-btn" class="btn btn-ghost" title="Save your work (also autosaves)">💾 Save</button>
+      <button id="export-btn" class="btn btn-ghost" title="Export your attempt as Markdown">⇩ Export</button>
+      <button id="reset-btn" class="btn btn-ghost danger" title="Clear your work for this problem">⌫ Reset</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: Problem brief -->
+    <section class="panel panel-problem" id="panel-problem">
+      <div class="panel-head">
+        <h2 id="problem-title">Problem</h2>
+        <span id="problem-difficulty" class="pill"></span>
+      </div>
+      <div class="panel-body" id="problem-body">
+        <!-- filled by JS -->
+      </div>
+    </section>
+
+    <!-- CENTER: Workspace (requirements + diagrams) -->
+    <section class="panel panel-workspace">
+      <nav class="tabs" id="workspace-tabs">
+        <button class="tab active" data-tab="requirements">Requirements</button>
+        <button class="tab" data-tab="class">Class Diagram</button>
+        <button class="tab" data-tab="sequence">Sequence Diagram</button>
+        <button class="tab" data-tab="state">State Diagram</button>
+        <button class="tab" data-tab="er">ER Diagram</button>
+        <button class="tab" data-tab="code">Code</button>
+        <button class="tab" data-tab="evaluation">Evaluation</button>
+      </nav>
+
+      <!-- Requirements tab -->
+      <div class="tab-pane active" data-pane="requirements">
+        <div class="req-grid">
+          <label class="field">
+            <span>Actors / Users</span>
+            <textarea id="req-actors" placeholder="e.g. Customer, Admin, Payment Gateway..."></textarea>
+          </label>
+          <label class="field">
+            <span>Functional Requirements</span>
+            <textarea id="req-functional" placeholder="- The system shall allow a user to..."></textarea>
+          </label>
+          <label class="field">
+            <span>Non-Functional Requirements</span>
+            <textarea id="req-nonfunctional" placeholder="- Availability, latency, scalability, security..."></textarea>
+          </label>
+          <label class="field">
+            <span>Core Entities / Objects</span>
+            <textarea id="req-entities" placeholder="List the main classes/objects you expect..."></textarea>
+          </label>
+          <label class="field">
+            <span>APIs / Core Methods</span>
+            <textarea id="req-apis" placeholder="e.g. bookSlot(userId, slotId): Ticket"></textarea>
+          </label>
+          <label class="field">
+            <span>Assumptions &amp; Constraints</span>
+            <textarea id="req-assumptions" placeholder="Scope boundaries, out-of-scope items..."></textarea>
+          </label>
+        </div>
+        <div class="checklist-box">
+          <h3>Self-check checklist <span class="muted" id="checklist-score"></span></h3>
+          <ul id="checklist" class="checklist"></ul>
+        </div>
+      </div>
+
+      <!-- Diagram tabs share the same editor shell -->
+      <div class="tab-pane" data-pane="class">
+        <div class="diagram-editor" data-kind="class"></div>
+      </div>
+      <div class="tab-pane" data-pane="sequence">
+        <div class="diagram-editor" data-kind="sequence"></div>
+      </div>
+      <div class="tab-pane" data-pane="state">
+        <div class="diagram-editor" data-kind="state"></div>
+      </div>
+      <div class="tab-pane" data-pane="er">
+        <div class="diagram-editor" data-kind="er"></div>
+      </div>
+
+      <!-- Code tab -->
+      <div class="tab-pane" data-pane="code">
+        <div class="code-project">
+          <aside class="file-explorer">
+            <div class="explorer-head">
+              <span class="label">Files</span>
+              <div class="explorer-actions">
+                <button class="icon-btn" id="new-file-btn" title="New file">＋ File</button>
+                <button class="icon-btn" id="new-folder-btn" title="New folder">＋ Folder</button>
+              </div>
+            </div>
+            <ul class="file-tree" id="file-tree"></ul>
+          </aside>
+          <div class="code-editor">
+            <div class="diagram-toolbar">
+              <span class="label" id="active-file-path">No file open</span>
+              <span class="muted" id="code-status">Autosaves as you type.</span>
+            </div>
+            <div class="code-host">
+              <textarea id="code-area" spellcheck="false"></textarea>
+              <div class="code-empty muted" id="code-empty">
+                Create a file to start writing code. Use folders (e.g.
+                <code>src/model/User.java</code>) to structure your design — the
+                evaluator sees the full tree.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evaluation tab -->
+      <div class="tab-pane" data-pane="evaluation">
+        <div class="eval-wrap">
+          <div class="eval-toolbar">
+            <button id="evaluate-btn" class="btn active">🤖 Evaluate my solution</button>
+            <button id="eval-settings-btn" class="btn btn-small">⚙ LLM Settings</button>
+            <button id="eval-import-btn" class="btn btn-small" title="Paste a result JSON (e.g. from Kiro) to render it">⬇ Import result</button>
+            <span class="muted" id="eval-status"></span>
+          </div>
+
+          <!-- Import-result box (used by Kiro manual mode) -->
+          <div class="eval-import hidden" id="eval-import">
+            <p class="muted">Paste the evaluation JSON (e.g. Kiro's reply) and click Render.</p>
+            <textarea id="eval-import-text" spellcheck="false" placeholder='{ "overall": 82, "verdict": "...", "scores": { ... }, "strengths": [...], "improvements": [...] }'></textarea>
+            <div class="eval-import-actions">
+              <button id="eval-import-render" class="btn btn-small active">Render result</button>
+              <button id="eval-import-cancel" class="btn btn-small">Cancel</button>
+            </div>
+          </div>
+
+          <div class="eval-body" id="eval-body">
+            <div class="eval-empty muted">
+              <p>Submit your attempt and an LLM will score it against an LLD rubric
+                 (requirements, class design, diagrams, code quality) and suggest
+                 improvements.</p>
+              <p>First time? Click <strong>⚙ LLM Settings</strong> to choose a provider
+                 and paste an API key (stored only in this browser), or point it at a
+                 local proxy.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Reference solution -->
+    <section class="panel panel-solution">
+      <div class="panel-head">
+        <h2>Reference Solution</h2>
+        <button id="toggle-solution" class="btn btn-small">Reveal</button>
+      </div>
+      <div class="panel-body" id="solution-body">
+        <div class="solution-locked" id="solution-locked">
+          <p>🔒 Try the problem first.</p>
+          <p class="muted">Write your requirements and draw your diagrams, then reveal a model answer to compare.</p>
+        </div>
+        <div class="solution-content hidden" id="solution-content"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- LLM settings modal -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>LLM Evaluation Settings</h2>
+        <button id="settings-close" class="btn btn-small">✕</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span>Mode</span>
+          <select id="set-mode">
+            <option value="byok">Bring your own key (call provider directly)</option>
+            <option value="proxy">Local proxy server (key stays server-side)</option>
+          </select>
+        </label>
+
+        <div id="byok-fields">
+          <label class="field">
+            <span>Provider</span>
+            <select id="set-provider">
+              <option value="kiro">Kiro (manual — paste into IDE chat)</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Model</span>
+            <input id="set-model" type="text" placeholder="e.g. gemini-3.8-flash, gpt-4o-mini, claude-3-5-sonnet-latest" />
+          </label>
+          <label class="field">
+            <span>API Key <span class="muted">(stored only in this browser's localStorage)</span></span>
+            <input id="set-key" type="password" placeholder="sk-..." autocomplete="off" />
+          </label>
+          <p class="warn-note">⚠ The key is kept in your browser and sent directly to the
+             provider. Use this only on your own machine. For stronger isolation, use the
+             local proxy mode.</p>
+        </div>
+
+        <div id="proxy-fields" class="hidden">
+          <label class="field">
+            <span>Proxy URL</span>
+            <input id="set-proxy-url" type="text" placeholder="http://localhost:8787/evaluate" />
+          </label>
+          <p class="muted">Run <code>node proxy-server.js</code> with your key in an env var.
+             See the README.</p>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="settings-save" class="btn active">Save settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mermaid for live diagram rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <!-- CodeMirror 5 for the code editor -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css" />
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/go/go.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closebrackets.min.js"></script>
+  <!-- Autocomplete (show-hint) addon -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.css" />
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/anyword-hint.min.js"></script>
+
+  <script src="problems.js"></script>
+  <script src="llm.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

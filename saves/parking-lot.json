@@ -1,0 +1,29 @@
+{
+  "requirements": {
+    "req-actors": "Drivers",
+    "req-functional": "multi level parking",
+    "req-nonfunctional": "",
+    "req-entities": "",
+    "req-apis": "",
+    "req-assumptions": ""
+  },
+  "diagrams": {
+    "class": "",
+    "sequence": "",
+    "state": "",
+    "er": ""
+  },
+  "checklist": {
+    "0": false,
+    "1": false,
+    "2": false,
+    "3": false,
+    "4": false,
+    "5": false,
+    "6": false
+  },
+  "project": {
+    "files": {},
+    "activeFile": null
+  }
+}
